@@ -1,0 +1,19 @@
+{
+  "name": "공학용 계산기",
+  "short_name": "계산기",
+  "description": "공학용 계산기 — 삼각함수, 로그, 거듭제곱 등 지원",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#eef0f4",
+  "theme_color": "#eef0f4",
+  "orientation": "any",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

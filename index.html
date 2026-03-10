@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#eef0f4">
+  <meta name="description" content="공학용 계산기">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="계산기">
+  <title>공학용 계산기</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+</head>
+<body>
+  <div class="calculator">
+
+    <!-- Display: normal view OR Friis form (toggled) -->
+    <div class="display">
+
+      <!-- Normal calculator display -->
+      <div id="normalDisplay">
+        <div class="display-info">
+          <span class="angle-mode" id="angleModeLabel">DEG</span>
+        </div>
+        <div class="expression" id="expression"></div>
+        <div class="result" id="result">0</div>
+      </div>
+
+      <!-- Friis form — replaces display when Friis button is toggled -->
+      <div id="friisDisplay" style="display:none">
+        <div class="fri-header">
+          <span>📡 Friis 전파 공식</span>
+          <button class="fri-close" onclick="calc.toggleFriisDisplay()">✕</button>
+        </div>
+        <div class="fri-row">
+          <div class="fri-field"><label>Pt (dBm)</label><input class="fri-in" id="fri-pt" type="number" placeholder="20" step="any"></div>
+          <div class="fri-field"><label>Gt (dBi)</label><input class="fri-in" id="fri-gt" type="number" placeholder="0" step="any"></div>
+          <div class="fri-field"><label>Gr (dBi)</label><input class="fri-in" id="fri-gr" type="number" placeholder="0" step="any"></div>
+        </div>
+        <div class="fri-row">
+          <div class="fri-field"><label>d (m)</label><input class="fri-in" id="fri-d" type="number" placeholder="1000" step="any"></div>
+          <div class="fri-field"><label>f (Hz)</label><input class="fri-in" id="fri-f" type="number" placeholder="2400000000" step="any"></div>
+          <button class="fri-calc-btn" onclick="calc.computeFriisInline()">▶</button>
+        </div>
+        <div class="fri-result" id="friisResult"></div>
+      </div>
+
+    </div>
+
+    <!-- Engineering + Memory bar (horizontally scrollable) -->
+    <div class="eng-bar">
+      <button class="btn-eng" onclick="calc.engConvert('wToDbm')">W→dBm</button>
+      <button class="btn-eng" onclick="calc.engConvert('dbmToW')">dBm→W</button>
+      <button class="btn-eng" id="friisBtn" onclick="calc.toggleFriisDisplay()">Friis</button>
+      <button class="btn-eng" onclick="calc.engConvert('msToMph')">m/s→mph</button>
+      <button class="btn-eng" onclick="calc.engConvert('mphToMs')">mph→m/s</button>
+    </div>
+
+    <!-- Button Grid: rows 1–8 = calculator -->
+    <div class="buttons">
+
+      <!-- Row 1 -->
+      <button class="btn btn-mode" id="invBtn"      onclick="calc.toggle2nd()">INV</button>
+      <button class="btn btn-mode" id="degRadBtn"   onclick="calc.toggleAngleMode()">DEG</button>
+      <button class="btn btn-sci"                   onclick="calc.appendChar('i')">i</button>
+      <button class="btn btn-sci"                   onclick="calc.inputConj()">conj</button>
+      <button class="btn btn-clear"                 onclick="calc.clear()">C</button>
+
+      <!-- Row 2 -->
+      <button class="btn btn-sci" id="sinBtn"       onclick="calc.inputTrig('sin')">sin</button>
+      <button class="btn btn-sci" id="cosBtn"       onclick="calc.inputTrig('cos')">cos</button>
+      <button class="btn btn-sci" id="tanBtn"       onclick="calc.inputTrig('tan')">tan</button>
+      <button class="btn btn-sci"                   onclick="calc.appendChar('π')">π</button>
+      <button class="btn btn-clear bs-tall"           onclick="calc.backspace()">⌫</button>
+
+      <!-- Row 3: hyperbolic -->
+      <button class="btn btn-sci" id="sinhBtn"      onclick="calc.inputHyp('sinh')">sinh</button>
+      <button class="btn btn-sci" id="coshBtn"      onclick="calc.inputHyp('cosh')">cosh</button>
+      <button class="btn btn-sci" id="tanhBtn"      onclick="calc.inputHyp('tanh')">tanh</button>
+      <button class="btn btn-sci"                   onclick="calc._insertFn('abs')">|x|</button>
+
+      <!-- Row 4 -->
+      <button class="btn btn-sci" id="logBtn"       onclick="calc.inputLogFn()">log</button>
+      <button class="btn btn-sci" id="lnBtn"        onclick="calc.inputLnFn()">ln</button>
+      <button class="btn btn-sci" id="x2Btn"        onclick="calc.inputX2()">x²</button>
+      <button class="btn btn-sci" id="sqrtBtn"      onclick="calc.inputSqrtFn()">√x</button>
+      <button class="btn btn-op"                    onclick="calc.appendChar('/')">÷</button>
+
+      <!-- Row 4 -->
+      <button class="btn btn-sci"                   onclick="calc.appendChar('(')">（</button>
+      <button class="btn btn-sci"                   onclick="calc.appendChar(')')">）</button>
+      <button class="btn btn-sci"                   onclick="calc.appendChar('^')">xʸ</button>
+      <button class="btn btn-sci"                   onclick="calc.appendChar('e')">e</button>
+      <button class="btn btn-op"                    onclick="calc.appendChar('*')">×</button>
+
+      <!-- Row 5 -->
+      <button class="btn btn-num"                   onclick="calc.appendChar('7')">7</button>
+      <button class="btn btn-num"                   onclick="calc.appendChar('8')">8</button>
+      <button class="btn btn-num"                   onclick="calc.appendChar('9')">9</button>
+      <button class="btn btn-sci"                   onclick="calc.inputFact()">n!</button>
+      <button class="btn btn-op"                    onclick="calc.appendChar('-')">−</button>
+
+      <!-- Row 6 -->
+      <button class="btn btn-num"                   onclick="calc.appendChar('4')">4</button>
+      <button class="btn btn-num"                   onclick="calc.appendChar('5')">5</button>
+      <button class="btn btn-num"                   onclick="calc.appendChar('6')">6</button>
+      <button class="btn btn-sci"                   onclick="calc.appendChar('%')">%</button>
+      <button class="btn btn-op"                    onclick="calc.appendChar('+')">+</button>
+
+      <!-- Row 7 (= spans rows 7–8) -->
+      <button class="btn btn-num"                   onclick="calc.appendChar('1')">1</button>
+      <button class="btn btn-num"                   onclick="calc.appendChar('2')">2</button>
+      <button class="btn btn-num"                   onclick="calc.appendChar('3')">3</button>
+      <button class="btn btn-sci"                   onclick="calc.input1divX()">1/x</button>
+      <button class="btn btn-eq eq-tall"            onclick="calc.calculate()">=</button>
+
+      <!-- Row 8 -->
+      <button class="btn btn-num"                   onclick="calc.inputPlusMinus()">+/−</button>
+      <button class="btn btn-num"                   onclick="calc.appendChar('0')">0</button>
+      <button class="btn btn-num"                   onclick="calc.inputDecimal()">.</button>
+      <button class="btn btn-sci"                   onclick="calc.inputAns()">ANS</button>
+    </div>
+  </div>
+
+  <script src="app.js?v=4"></script>
+</body>
+</html>
