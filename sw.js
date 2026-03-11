@@ -1,11 +1,13 @@
-const CACHE = 'sci-calc-v5';
+const CACHE = 'sci-calc-v6';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
-  './icon.svg'
+  './icon.svg',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', e => {
