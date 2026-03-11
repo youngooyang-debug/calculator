@@ -59,12 +59,20 @@ class ScientificCalculator {
     this.isRad      = false;
     this.is2nd      = false;
     this.justCalc   = false;
+    this.friisField = null;
     this._updateDisplay();
   }
 
   // ── Input helpers ──────────────────────────────────────────────────────────
 
   appendChar(ch) {
+    if (this.friisField) {
+      if (/^[0-9]$/.test(ch)) {
+        const el = document.getElementById(this.friisField);
+        if (el) el.value += ch;
+      }
+      return;
+    }
     if (this.justCalc) {
       if (/^[0-9.(πei]/.test(ch)) this.expr = '';
       this.justCalc = false;
@@ -78,6 +86,11 @@ class ScientificCalculator {
   }
 
   inputDecimal() {
+    if (this.friisField) {
+      const el = document.getElementById(this.friisField);
+      if (el && !el.value.includes('.')) el.value += '.';
+      return;
+    }
     const lastNum = this.expr.match(/[0-9.]*$/)[0];
     if (lastNum.includes('.')) return;
     if (this.justCalc) { this.expr = ''; this.justCalc = false; }
@@ -87,6 +100,11 @@ class ScientificCalculator {
   }
 
   inputPlusMinus() {
+    if (this.friisField) {
+      const el = document.getElementById(this.friisField);
+      if (el) el.value = el.value.startsWith('-') ? el.value.slice(1) : '-' + el.value;
+      return;
+    }
     if (this.justCalc) {
       this.expr = this._complexExprStr(this.prevResult);
       this.justCalc = false;
@@ -97,6 +115,11 @@ class ScientificCalculator {
   }
 
   backspace() {
+    if (this.friisField) {
+      const el = document.getElementById(this.friisField);
+      if (el) el.value = el.value.slice(0, -1);
+      return;
+    }
     if (this.justCalc) { this.expr = ''; this.justCalc = false; this._updateDisplay(); return; }
     const multi = ['asinh(', 'acosh(', 'atanh(', 'asin(', 'acos(', 'atan(', 'sinh(', 'cosh(', 'tanh(', 'sin(', 'cos(', 'tan(', 'sqrt(', 'cbrt(', 'log(', 'ln(', 'abs(', 'floor(', 'conj(', 'fact(', 'ANS', '(-1)*(', 'e^(', '10^('];
     let hit = false;
@@ -108,6 +131,11 @@ class ScientificCalculator {
   }
 
   clear() {
+    if (this.friisField) {
+      const el = document.getElementById(this.friisField);
+      if (el) el.value = '';
+      return;
+    }
     this.expr = '';
     this.justCalc = false;
     this.prevResult = null;
@@ -204,7 +232,7 @@ class ScientificCalculator {
       this.justCalc = true;
       this._setResult(this._fmt(val));
     } catch (e) {
-      this._setResult('오류');
+      this._setResult('Error');
       this.expr = '';
       this.justCalc = false;
     }
@@ -221,6 +249,7 @@ class ScientificCalculator {
   }
 
   _insertFn(fn) {
+    if (this.friisField) return;
     if (this.justCalc) { this.expr = ''; this.justCalc = false; }
     // Implicit multiplication: 2sin(→2*sin(
     if (this.expr && /[0-9.πei)]$/.test(this.expr)) this.expr += '*';
@@ -262,8 +291,8 @@ class ScientificCalculator {
       n = n.toNum();
       if (n instanceof Complex) return n.toString();
     }
-    if (!isFinite(n)) return n > 0 ? '∞' : '오류';
-    if (Number.isNaN(n)) return '오류';
+    if (!isFinite(n)) return n > 0 ? '∞' : 'Error';
+    if (Number.isNaN(n)) return 'Error';
     if (Number.isInteger(n)) return n.toString();
     return parseFloat(n.toPrecision(10)).toString();
   }
@@ -457,53 +486,155 @@ class ScientificCalculator {
   }
 
   _applyFn(fn, rawArg) {
-    // Simplify complex to real if imaginary part ≈ 0
+    // Simplify complex → real when imaginary part ≈ 0
     const arg = rawArg instanceof Complex ? rawArg.toNum() : rawArg;
-    const toRad   = v => this.isRad ? v : v * Math.PI / 180;
-    const fromRad = v => this.isRad ? v : v * 180 / Math.PI;
+    const isC = arg instanceof Complex;
 
-    // Functions with full complex support
+    // Angle-mode helpers — work on both real and Complex values
+    const toRad = v => {
+      if (this.isRad) return v;
+      if (v instanceof Complex) return new Complex(v.re * Math.PI/180, v.im * Math.PI/180);
+      return v * Math.PI / 180;
+    };
+    const fromRad = v => {
+      if (this.isRad) return v instanceof Complex ? v.toNum() : v;
+      if (v instanceof Complex) return (new Complex(v.re * 180/Math.PI, v.im * 180/Math.PI)).toNum();
+      return v * 180 / Math.PI;
+    };
+
+    // Always-Complex helpers
+    // Note: normalise -0 → +0 so principal arg of negative reals is +π, not −π
+    const cln = w => {
+      const z = Complex.from(w);
+      const im = z.im === 0 ? 0 : z.im;
+      return new Complex(Math.log(z.abs()), Math.atan2(im, z.re));
+    };
+    const csqrt = w => {
+      const z = Complex.from(w);
+      const im = z.im === 0 ? 0 : z.im;
+      const r = z.abs(), theta = Math.atan2(im, z.re);
+      return new Complex(Math.sqrt(r) * Math.cos(theta/2), Math.sqrt(r) * Math.sin(theta/2));
+    };
+
     switch (fn) {
-      case 'abs':
-        return arg instanceof Complex ? arg.abs() : Math.abs(arg);
-      case 'conj':
-        return arg instanceof Complex ? arg.conj() : arg;
+
+      // ── abs / conj ──────────────────────────────────────────────────────────
+      case 'abs':  return isC ? arg.abs() : Math.abs(arg);
+      case 'conj': return isC ? arg.conj() : arg;
+
+      // ── roots ────────────────────────────────────────────────────────────────
       case 'sqrt':
-        if (arg instanceof Complex) {
-          const r = arg.abs(), theta = Math.atan2(arg.im, arg.re);
-          return (new Complex(Math.sqrt(r)*Math.cos(theta/2), Math.sqrt(r)*Math.sin(theta/2))).toNum();
-        }
-        return arg < 0 ? new Complex(0, Math.sqrt(-arg)) : Math.sqrt(arg);
-      case 'ln':
-        if (arg instanceof Complex)
-          return (new Complex(Math.log(arg.abs()), Math.atan2(arg.im, arg.re))).toNum();
-        return Math.log(arg);
-      case 'log':
-        if (arg instanceof Complex) {
-          const lnz = new Complex(Math.log(arg.abs()), Math.atan2(arg.im, arg.re));
-          return (new Complex(lnz.re/Math.LN10, lnz.im/Math.LN10)).toNum();
-        }
-        return Math.log10(arg);
-    }
+        if (!isC && arg >= 0) return Math.sqrt(arg);
+        return csqrt(arg).toNum();
 
-    // Real-only functions — use real part if given complex
-    const x = arg instanceof Complex ? arg.re : arg;
-    switch (fn) {
-      case 'sin':   return Math.sin(toRad(x));
-      case 'cos':   return Math.cos(toRad(x));
-      case 'tan':   return Math.tan(toRad(x));
-      case 'asin':  return fromRad(Math.asin(x));
-      case 'acos':  return fromRad(Math.acos(x));
-      case 'atan':  return fromRad(Math.atan(x));
-      case 'sinh':  return Math.sinh(x);
-      case 'cosh':  return Math.cosh(x);
-      case 'tanh':  return Math.tanh(x);
-      case 'asinh': return Math.asinh(x);
-      case 'acosh': return Math.acosh(x);
-      case 'atanh': return Math.atanh(x);
-      case 'floor': return Math.floor(x);
-      case 'cbrt':  return Math.cbrt(x);
-      case 'fact':  return this._factorial(x);
+      case 'cbrt': {
+        if (!isC) return Math.cbrt(arg);
+        const r = Math.cbrt(arg.abs()), t = Math.atan2(arg.im, arg.re) / 3;
+        return (new Complex(r * Math.cos(t), r * Math.sin(t))).toNum();
+      }
+
+      // ── logarithms ───────────────────────────────────────────────────────────
+      case 'ln':
+        if (!isC && arg > 0) return Math.log(arg);
+        return cln(arg).toNum();
+
+      case 'log': {
+        if (!isC && arg > 0) return Math.log10(arg);
+        const L = cln(arg);
+        return (new Complex(L.re / Math.LN10, L.im / Math.LN10)).toNum();
+      }
+
+      // ── trig  (toRad on INPUT, no fromRad on output) ─────────────────────────
+      case 'sin': {
+        if (!isC) return Math.sin(toRad(arg));
+        const z = toRad(arg);                               // complex radians
+        return (new Complex(Math.sin(z.re) * Math.cosh(z.im),
+                            Math.cos(z.re) * Math.sinh(z.im))).toNum();
+      }
+      case 'cos': {
+        if (!isC) return Math.cos(toRad(arg));
+        const z = toRad(arg);
+        return (new Complex( Math.cos(z.re) * Math.cosh(z.im),
+                            -Math.sin(z.re) * Math.sinh(z.im))).toNum();
+      }
+      case 'tan': {
+        if (!isC) return Math.tan(toRad(arg));
+        const z = toRad(arg);
+        const s = new Complex( Math.sin(z.re)*Math.cosh(z.im),  Math.cos(z.re)*Math.sinh(z.im));
+        const c = new Complex( Math.cos(z.re)*Math.cosh(z.im), -Math.sin(z.re)*Math.sinh(z.im));
+        return s.div(c).toNum();
+      }
+
+      // ── inverse trig  (fromRad on OUTPUT) ────────────────────────────────────
+      // asin(z) = −i · ln( iz + √(1−z²) )
+      case 'asin': {
+        if (!isC && Math.abs(arg) <= 1) return fromRad(Math.asin(arg));
+        const z  = Complex.from(arg);
+        const iz = new Complex(-z.im, z.re);                // i·z
+        const w  = iz.add(csqrt(Complex.from(1).sub(z.mul(z))));
+        const L  = cln(w);
+        return fromRad(new Complex(L.im, -L.re).toNum());   // −i·ln w
+      }
+      // acos(z) = −i · ln( z + i·√(1−z²) )
+      case 'acos': {
+        if (!isC && Math.abs(arg) <= 1) return fromRad(Math.acos(arg));
+        const z   = Complex.from(arg);
+        const sv  = csqrt(Complex.from(1).sub(z.mul(z)));
+        const isv = new Complex(-sv.im, sv.re);             // i·√(1−z²)
+        const L   = cln(z.add(isv));
+        return fromRad(new Complex(L.im, -L.re).toNum());   // −i·ln(…)
+      }
+      // atan(z) = −i/2 · ln( (1+iz)/(1−iz) )
+      case 'atan': {
+        if (!isC) return fromRad(Math.atan(arg));
+        const iz = new Complex(-arg.im, arg.re);            // i·z
+        const L  = cln(Complex.from(1).add(iz).div(Complex.from(1).sub(iz)));
+        return fromRad(new Complex(L.im / 2, -L.re / 2).toNum());
+      }
+
+      // ── hyperbolic  (no angle conversion) ────────────────────────────────────
+      // sinh(x+iy) = sinh(x)cos(y) + i·cosh(x)sin(y)
+      case 'sinh': {
+        if (!isC) return Math.sinh(arg);
+        return (new Complex(Math.sinh(arg.re)*Math.cos(arg.im),
+                            Math.cosh(arg.re)*Math.sin(arg.im))).toNum();
+      }
+      // cosh(x+iy) = cosh(x)cos(y) + i·sinh(x)sin(y)
+      case 'cosh': {
+        if (!isC) return Math.cosh(arg);
+        return (new Complex(Math.cosh(arg.re)*Math.cos(arg.im),
+                            Math.sinh(arg.re)*Math.sin(arg.im))).toNum();
+      }
+      case 'tanh': {
+        if (!isC) return Math.tanh(arg);
+        const s = new Complex(Math.sinh(arg.re)*Math.cos(arg.im), Math.cosh(arg.re)*Math.sin(arg.im));
+        const c = new Complex(Math.cosh(arg.re)*Math.cos(arg.im), Math.sinh(arg.re)*Math.sin(arg.im));
+        return s.div(c).toNum();
+      }
+
+      // ── inverse hyperbolic ────────────────────────────────────────────────────
+      // asinh(z) = ln( z + √(z²+1) )
+      case 'asinh': {
+        if (!isC) return Math.asinh(arg);
+        return cln(arg.add(csqrt(arg.mul(arg).add(Complex.from(1))))).toNum();
+      }
+      // acosh(z) = ln( z + √(z²−1) )  — complex for real z < 1
+      case 'acosh': {
+        if (!isC && arg >= 1) return Math.acosh(arg);
+        const z = Complex.from(arg);
+        return cln(z.add(csqrt(z.mul(z).sub(Complex.from(1))))).toNum();
+      }
+      // atanh(z) = ½·ln( (1+z)/(1−z) )  — complex for real |z| ≥ 1
+      case 'atanh': {
+        if (!isC && Math.abs(arg) < 1) return Math.atanh(arg);
+        const z = Complex.from(arg);
+        const L = cln(Complex.from(1).add(z).div(Complex.from(1).sub(z)));
+        return (new Complex(L.re / 2, L.im / 2)).toNum();
+      }
+
+      // ── misc ─────────────────────────────────────────────────────────────────
+      case 'floor': return Math.floor(isC ? arg.re : arg);
+      case 'fact':  return this._factorial(isC ? arg.re : arg);
       default:      throw new Error(`Unknown fn: ${fn}`);
     }
   }
@@ -523,12 +654,12 @@ class ScientificCalculator {
     try { val = this._evaluate(this.expr); } catch (_) { val = this.prevResult; }
     if (val instanceof Complex) val = val.toNum();
     if (val instanceof Complex || val === null || val === undefined || isNaN(val)) {
-      this._setResult('오류 (실수 필요)'); return;
+      this._setResult('Error'); return;
     }
     let result, exprLabel, unit;
     switch (fn) {
       case 'wToDbm':
-        if (val <= 0) { this._setResult('오류 (W>0)'); return; }
+        if (val <= 0) { this._setResult('Error (W>0)'); return; }
         result = 10 * Math.log10(val * 1000); exprLabel = `${this._fmt(val)} W =`; unit = 'dBm'; break;
       case 'dbmToW':
         result = Math.pow(10, val / 10) / 1000; exprLabel = `${this._fmt(val)} dBm =`; unit = 'W'; break;
@@ -536,6 +667,10 @@ class ScientificCalculator {
         result = val * 3600 / 1609.344; exprLabel = `${this._fmt(val)} m/s =`; unit = 'mi/h'; break;
       case 'mphToMs':
         result = val * 1609.344 / 3600; exprLabel = `${this._fmt(val)} mi/h =`; unit = 'm/s'; break;
+      case 'milToMm':
+        result = val * 0.0254; exprLabel = `${this._fmt(val)} mil =`; unit = 'mm'; break;
+      case 'ozToUm':
+        result = val * 34.8; exprLabel = `${this._fmt(val)} oz =`; unit = 'μm'; break;
       default: return;
     }
     document.getElementById('expression').textContent = exprLabel;
@@ -553,16 +688,31 @@ class ScientificCalculator {
     friis.style.display  = showFriis ? 'flex' : 'none';
     normal.style.display = showFriis ? 'none' : '';
     btn.classList.toggle('active', showFriis);
+    if (showFriis) this._friisSetField('fri-pt');
+    else           this._friisSetField(null);
+  }
+
+  _friisSetField(id) {
+    this.friisField = id || null;
+    document.querySelectorAll('.fri-in').forEach(el => el.classList.remove('active'));
+    if (id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('active');
+    }
   }
 
   computeFriisInline() {
-    const get = id => parseFloat(document.getElementById(id).value);
+    const get = id => {
+      const el = document.getElementById(id);
+      return parseFloat(el.value !== '' ? el.value : el.placeholder);
+    };
     const [pt, gt, gr, d, f] = ['fri-pt','fri-gt','fri-gr','fri-d','fri-f'].map(get);
     const out = document.getElementById('friisResult');
     if ([pt, gt, gr, d, f].some(isNaN) || d <= 0 || f <= 0) {
-      out.innerHTML = '<span class="fri-err">입력값 오류 (d, f &gt; 0)</span>'; return;
+      out.innerHTML = '<span class="fri-err">Input error (D, F &gt; 0)</span>'; return;
     }
-    const fspl   = 20 * Math.log10(d) + 20 * Math.log10(f) - 147.55;
+    const fHz    = f * 1e9; // input is GHz
+    const fspl   = 20 * Math.log10(d) + 20 * Math.log10(fHz) - 147.55;
     const pr_dbm = pt + gt + gr - fspl;
     const pr_w   = Math.pow(10, (pr_dbm - 30) / 10);
     out.innerHTML =
@@ -571,7 +721,7 @@ class ScientificCalculator {
   }
 
   _engFmt(n) {
-    if (!isFinite(n) || isNaN(n)) return '오류';
+    if (!isFinite(n) || isNaN(n)) return 'Error';
     if (n === 0) return '0';
     const abs = Math.abs(n);
     if (abs >= 1e-3 && abs < 1e10) return parseFloat(n.toPrecision(6)).toString();

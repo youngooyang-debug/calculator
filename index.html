@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#eef0f4">
-  <meta name="description" content="공학용 계산기">
+  <meta name="description" content="Scientific calculator">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="계산기">
-  <title>공학용 계산기</title>
+  <meta name="apple-mobile-web-app-title" content="Calculator">
+  <title>Calculator</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=5">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
 </head>
 <body>
@@ -32,17 +32,17 @@
       <!-- Friis form — replaces display when Friis button is toggled -->
       <div id="friisDisplay" style="display:none">
         <div class="fri-header">
-          <span>📡 Friis 전파 공식</span>
+          <span>📡 Friis Equation</span>
           <button class="fri-close" onclick="calc.toggleFriisDisplay()">✕</button>
         </div>
         <div class="fri-row">
-          <div class="fri-field"><label>Pt (dBm)</label><input class="fri-in" id="fri-pt" type="number" placeholder="20" step="any"></div>
-          <div class="fri-field"><label>Gt (dBi)</label><input class="fri-in" id="fri-gt" type="number" placeholder="0" step="any"></div>
-          <div class="fri-field"><label>Gr (dBi)</label><input class="fri-in" id="fri-gr" type="number" placeholder="0" step="any"></div>
+          <div class="fri-field"><label>PT (dBm)</label><input class="fri-in" id="fri-pt" type="text" inputmode="none" readonly placeholder="20" onclick="calc._friisSetField('fri-pt')"></div>
+          <div class="fri-field"><label>GT (dBi)</label><input class="fri-in" id="fri-gt" type="text" inputmode="none" readonly placeholder="0" onclick="calc._friisSetField('fri-gt')"></div>
+          <div class="fri-field"><label>GR (dBi)</label><input class="fri-in" id="fri-gr" type="text" inputmode="none" readonly placeholder="0" onclick="calc._friisSetField('fri-gr')"></div>
         </div>
         <div class="fri-row">
-          <div class="fri-field"><label>d (m)</label><input class="fri-in" id="fri-d" type="number" placeholder="1000" step="any"></div>
-          <div class="fri-field"><label>f (Hz)</label><input class="fri-in" id="fri-f" type="number" placeholder="2400000000" step="any"></div>
+          <div class="fri-field"><label>D (m)</label><input class="fri-in" id="fri-d" type="text" inputmode="none" readonly placeholder="10" onclick="calc._friisSetField('fri-d')"></div>
+          <div class="fri-field"><label>F (GHz)</label><input class="fri-in" id="fri-f" type="text" inputmode="none" readonly placeholder="2.4" onclick="calc._friisSetField('fri-f')"></div>
           <button class="fri-calc-btn" onclick="calc.computeFriisInline()">▶</button>
         </div>
         <div class="fri-result" id="friisResult"></div>
@@ -52,11 +52,12 @@
 
     <!-- Engineering + Memory bar (horizontally scrollable) -->
     <div class="eng-bar">
-      <button class="btn-eng" onclick="calc.engConvert('wToDbm')">W→dBm</button>
-      <button class="btn-eng" onclick="calc.engConvert('dbmToW')">dBm→W</button>
-      <button class="btn-eng" id="friisBtn" onclick="calc.toggleFriisDisplay()">Friis</button>
       <button class="btn-eng" onclick="calc.engConvert('msToMph')">m/s→mph</button>
       <button class="btn-eng" onclick="calc.engConvert('mphToMs')">mph→m/s</button>
+      <button class="btn-eng" onclick="calc.engConvert('wToDbm')">W→dBm</button>
+      <button class="btn-eng" onclick="calc.engConvert('dbmToW')">dBm→W</button>
+      <button class="btn-eng" onclick="calc.engConvert('milToMm')">mil→mm</button>
+      <button class="btn-eng" onclick="calc.engConvert('ozToUm')">oz→μm</button>
     </div>
 
     <!-- Button Grid: rows 1–8 = calculator -->
@@ -67,20 +68,21 @@
       <button class="btn btn-mode" id="degRadBtn"   onclick="calc.toggleAngleMode()">DEG</button>
       <button class="btn btn-sci"                   onclick="calc.appendChar('i')">i</button>
       <button class="btn btn-sci"                   onclick="calc.inputConj()">conj</button>
-      <button class="btn btn-clear"                 onclick="calc.clear()">C</button>
+      <button class="btn btn-mode" id="friisBtn"    onclick="calc.toggleFriisDisplay()">Friis</button>
 
       <!-- Row 2 -->
       <button class="btn btn-sci" id="sinBtn"       onclick="calc.inputTrig('sin')">sin</button>
       <button class="btn btn-sci" id="cosBtn"       onclick="calc.inputTrig('cos')">cos</button>
       <button class="btn btn-sci" id="tanBtn"       onclick="calc.inputTrig('tan')">tan</button>
       <button class="btn btn-sci"                   onclick="calc.appendChar('π')">π</button>
-      <button class="btn btn-clear bs-tall"           onclick="calc.backspace()">⌫</button>
+      <button class="btn btn-clear"                 onclick="calc.clear()">C</button>
 
       <!-- Row 3: hyperbolic -->
       <button class="btn btn-sci" id="sinhBtn"      onclick="calc.inputHyp('sinh')">sinh</button>
       <button class="btn btn-sci" id="coshBtn"      onclick="calc.inputHyp('cosh')">cosh</button>
       <button class="btn btn-sci" id="tanhBtn"      onclick="calc.inputHyp('tanh')">tanh</button>
       <button class="btn btn-sci"                   onclick="calc._insertFn('abs')">|x|</button>
+      <button class="btn btn-clear"                 onclick="calc.backspace()">⌫</button>
 
       <!-- Row 4 -->
       <button class="btn btn-sci" id="logBtn"       onclick="calc.inputLogFn()">log</button>
@@ -125,6 +127,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

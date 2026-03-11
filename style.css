@@ -156,10 +156,9 @@ html, body {
 }
 
 .fri-field label {
-  font-size: 9px;
+  font-size: 10px;
   color: #444444;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
 }
 
 .fri-in {
@@ -193,12 +192,17 @@ html, body {
 .fri-calc-btn:active { filter: brightness(0.85); }
 
 .fri-result {
-  font-size: 11px;
-  color: #555555;
-  min-height: 14px;
+  font-size: 13px;
+  color: #444444;
+  min-height: 16px;
 }
 .fri-result b { color: #007070; }
-.fri-err { color: #cc2020; font-size: 11px; }
+.fri-err { color: #cc2020; font-size: 13px; }
+
+.fri-in.active {
+  border-color: #4040bb;
+  background: #eef0f8;
+}
 
 /* ── Engineering bar ── */
 .eng-bar {
@@ -216,10 +220,10 @@ html, body {
   border-radius: 8px;
   cursor: pointer;
   touch-action: manipulation;
-  font-size: 13px;
-  letter-spacing: 0.1px;
+  font-size: 11px;
+  letter-spacing: 0;
   line-height: 1.2;
-  padding: 0 4px;
+  padding: 0 2px;
   display: flex;
   align-items: center;
   justify-content: center;
