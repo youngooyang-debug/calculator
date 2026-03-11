@@ -1,4 +1,4 @@
-const CACHE = 'sci-calc-v4';
+const CACHE = 'sci-calc-v5';
 const ASSETS = [
   './',
   './index.html',
